@@ -5,22 +5,19 @@ UNIGRAM_DATA = {}
 BIGRAM_DATA = {}
 TRIGRAM_DATA = {}
 
-# TODO: update the type once determine what it is
 def print_data():
     print("\\data\\")
     for k, v in N_GRAM_DATA.items():
         print(f"{k}: type={v['type']} token={v['token']}")
     print()
 
-# TODO -check that probs are not 0
-# TODO: add the first column value for all prob reporting
 def find_unigram_probs():
     total_count = N_GRAM_DATA['ngram 1']['token']
     print("\\1-grams")
     for key,value in UNIGRAM_DATA.items():
         prob = value / total_count
         log_prob = math.log10(prob)
-        print(f'{prob} {log_prob} {key}')
+        print(f'{value} {prob} {log_prob} {key}')
 
     print()
 
@@ -32,8 +29,20 @@ def find_bigram_probs():
         unigram_count = UNIGRAM_DATA.get(w1)
         prob = bigram_count / unigram_count
         log_prob = math.log10(prob)
-        print(f'{prob} {log_prob} {item}')
+        print(f'{value} {prob} {log_prob} {item}')
     print()
+
+def find_trigam_probs():
+    print("\\3-grams")
+    for item, value in TRIGRAM_DATA.items():
+        trigam_count = value
+        split_bigram = item.split()[0:-1]
+        bigram = " ".join(split_bigram)
+        bigram_count = BIGRAM_DATA.get(bigram)
+        prob = trigam_count / bigram_count
+        log_prob = math.log10(prob)
+        print(f'{value} {prob} {log_prob} {item}')
+        print()
 
 def add_data(current_n, n_gram, token_count):
     string_n_gram = " ".join(n_gram)
@@ -47,17 +56,19 @@ def add_data(current_n, n_gram, token_count):
 def update_ngram_data():
     uni_values = UNIGRAM_DATA.values()
     uni_total_tokens = sum(uni_values)
+    uni_types = len(UNIGRAM_DATA)
 
     bi_values = BIGRAM_DATA.values()
     bi_total_tokens = sum(bi_values)
+    bi_types = len(BIGRAM_DATA)
 
     tri_values = TRIGRAM_DATA.values()
     tri_total_tokens = sum(tri_values)
+    tri_types = len(TRIGRAM_DATA)
 
-    # TODO! What are the types???
-    N_GRAM_DATA['ngram 1'] = {'type': 1, 'token': uni_total_tokens}
-    N_GRAM_DATA['ngram 2'] = {'type': 2, 'token': bi_total_tokens}
-    N_GRAM_DATA['ngram 3'] = {'type': 3, 'token': tri_total_tokens}
+    N_GRAM_DATA['ngram 1'] = {'type': uni_types, 'token': uni_total_tokens}
+    N_GRAM_DATA['ngram 2'] = {'type': bi_types, 'token': bi_total_tokens}
+    N_GRAM_DATA['ngram 3'] = {'type': tri_types, 'token': tri_total_tokens}
 
 def get_probs(count_file):
     with open(count_file, 'r', encoding='utf8') as file:
@@ -101,8 +112,8 @@ def main():
     count_file = '../q1/ngram_count_file'
     get_counts(count_file)
     update_ngram_data()
-    print_data()
-    find_unigram_probs()
-    find_bigram_probs()
-    # TODO implement find_trigram_probs()
+    # print_data()
+    # find_unigram_probs()
+    # find_bigram_probs()
+    find_trigam_probs()
 main()
