@@ -1,5 +1,7 @@
 import sys
+import math
 
+SUM = 0
 WORD_NUM = 0
 OOV_NUM = 0
 SENTENCE_COUNT = 0
@@ -8,9 +10,25 @@ UNIGRAMS = {}
 BIGRAMS = {}
 TRIGRAMS = {}
 
-def calculate_perplexity(test_data, lm_file):
+def print_results():
+    with open('results', 'a') as file:
+        print("DATA!", file=file)
+        print(DATA, file=file)
+        print(file=file)
+        
+        print("1-grams", file=file)
+        print(UNIGRAMS, file=file)
+        print(file=file)
+        print("2-grams", file=file)
+        print(BIGRAMS, file=file)
+        print(file=file)
+
+        print("3-grams", file=file)
+        print(TRIGRAMS, file=file)
+
+def calculate_perplexity(test_data, lamdba_1, lambda_2, lambda_3):
     with open(test_data, 'r', encoding='utf8') as file:
-        global SENTENCE_COUNT, WORD_NUM, OOV_NUM
+        global SENTENCE_COUNT, WORD_NUM, OOV_NUM, SUM
         lines = file.readlines()
         SENTENCE_COUNT = len(lines)
         for line in lines:
@@ -19,15 +37,32 @@ def calculate_perplexity(test_data, lm_file):
             EOS = split_line.pop(-1)
             WORD_NUM += len(split_line)
             split_line.append(EOS)
-            for word in split_line:
+            length = len(split_line)
+            for i, word in  enumerate(split_line):
+                # UNIGRAMS P
                 if word in UNIGRAMS:
-                    # TODO: compute interpolated probability here
-                    print("WWWORD", word)
+                    uni_prob = UNIGRAMS[word].get('prob')
+                    l1 = float(lamdba_1) * float(uni_prob)
+                    #BIGRAMS P
+                    if i+1< length:
+                        bigram_token = f"{split_line[i]} {split_line[i+1]}"
+                        if bigram_token in BIGRAMS:
+                            bi_prob = BIGRAMS[bigram_token].get('prob')
+                            l2 = float(lambda_2) * float(bi_prob)
+                        else:
+                            l2 = 0
+                    # TRIGRAMS
+                    if i+2 < length:
+                        tri_token = f"{split_line[i]} {split_line[i+1]} {split_line[i+2]}"
+                        if tri_token in TRIGRAMS:
+                            tri_prob = TRIGRAMS[tri_token].get('prob')
+                            l3 = float(lambda_3) * float(tri_prob)
+                        else:
+                            l3 = 0
+                    total_prob = l1 + l2 + l3
+                    SUM += math.log10(total_prob)
                 else:
                     OOV_NUM +=1
-
-                # if word in lm_file --> compute probabilities
-
 def get_final_perplexity():
     count = WORD_NUM + SENTENCE_COUNT - OOV_NUM
     # TODO: calculate per slide
@@ -103,11 +138,7 @@ def read_inputs():
 def main():
     lm_file, lamdba_1, lambda_2, lambda_3, test_data, output_file = read_inputs()
     load_lm(lm_file)
-    # print("DATA", DATA)
-    # print("UNI", UNIGRAMS)
-    # print("BI", BIGRAMS)
-    # print("TRI", TRIGRAMS)
-
-    calculate_perplexity(test_data, lm_file)
+    calculate_perplexity(test_data, lamdba_1, lambda_2, lambda_3)
+    # print_results()
 main()
     
