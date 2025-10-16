@@ -3,12 +3,13 @@ import math
 
 SUM = 0
 WORD_NUM = 0
-OOV_NUM = 0
+OOV = 0
 SENTENCE_COUNT = 0
 DATA = {}
 UNIGRAMS = {}
 BIGRAMS = {}
 TRIGRAMS = {}
+SENTENCE_LOG_PROB = 0
 
 def print_results():
     with open('results', 'a') as file:
@@ -27,6 +28,7 @@ def print_results():
         print(TRIGRAMS, file=file)
 
 def get_word_probs(lamdba_1, lambda_2, lambda_3, token):
+    global OOV
     split_token = token.split(" ")
     word = split_token[0]
     bigram = f"{split_token[-1]} {word}"
@@ -41,6 +43,7 @@ def get_word_probs(lamdba_1, lambda_2, lambda_3, token):
         l3 = float(tri_prob) * float(lambda_3)
         total_prob = l1 + l2 + l3
     else: 
+        OOV +=1
         total_prob = 0
     if total_prob > 0:
         return math.log10(total_prob)
@@ -48,6 +51,8 @@ def get_word_probs(lamdba_1, lambda_2, lambda_3, token):
         return float('-inf')
 
 def get_tokens(sentence, lamdba_1, lambda_2, lambda_3):
+    global SENTENCE_LOG_PROB
+    sentence_log = 0.0
     for i, word in enumerate(sentence):
         if i == 0:
             token = f"{word} | <s>"
@@ -56,15 +61,19 @@ def get_tokens(sentence, lamdba_1, lambda_2, lambda_3):
         if i > 1:
             token = f"{word} | {sentence[i-2]} {sentence[i-1]}"
         word_prob = get_word_probs(lamdba_1, lambda_2, lambda_3, token)
-        print("PPP", word_prob)
+        print(f"{i+1}: lg P({token}) = {word_prob}")
+        if  word_prob != float('-inf'):
+            sentence_log += word_prob
+    return sentence_log
 
 def calculate_lambda_probs(test_data, lamdba_1, lambda_2, lambda_3, output_file):
     with open(test_data, 'r', encoding='utf8') as file:
         with open(output_file, 'a') as output_file:
-            global SENTENCE_COUNT, WORD_NUM, OOV_NUM, SUM
+            global SENTENCE_COUNT, WORD_NUM, OOV, SUM, SENTENCE_LOG_PROB
             lines = file.readlines()
-            SENTENCE_COUNT = len(lines)
             for i, line in enumerate(lines):
+                OOV = 0
+                SENTENCE_LOG_PROB = 0
                 print(f"Sent #{i+1}: {line}", file=output_file)
                 split_line = line.split()
                 # Handle BOS and EOS once tags are put back in
@@ -73,12 +82,23 @@ def calculate_lambda_probs(test_data, lamdba_1, lambda_2, lambda_3, output_file)
                 # split_line.append(EOS)
                 
                 WORD_NUM += len(split_line)
-                # for word in split_line:
-                get_tokens(split_line, lamdba_1, lambda_2, lambda_3,)
+                sentence_log = get_tokens(split_line, lamdba_1, lambda_2, lambda_3)
+                SUM += sentence_log
+                word_count = len(split_line)
+
+                valid_words = word_count - OOV
+                if valid_words > 0:
+                    sentence_avg_log = -(sentence_log / valid_words)
+                    ppl = 10 ** (sentence_avg_log)
+
+
+                print(f"1 sentence, {word_count} words, {OOV} OOVs", )
+                print(f"lgprob={sentence_log}, ppl={ppl}")
+                print()
                 
 def get_perplexity():
-    global WORD_NUM, SENTENCE_COUNT, OOV_NUM, SUM
-    count = WORD_NUM + SENTENCE_COUNT - OOV_NUM
+    global WORD_NUM, SENTENCE_COUNT, OOV, SUM
+    count = WORD_NUM + SENTENCE_COUNT - OOV
     total = -SUM / count
     ppl = 10 ** total
     return ppl
