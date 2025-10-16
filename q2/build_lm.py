@@ -1,16 +1,17 @@
 import math
+import sys
 
 N_GRAM_DATA = {}
 UNIGRAM_DATA = {}
 BIGRAM_DATA = {}
 TRIGRAM_DATA = {}
 
-def print_data():
-    print("\\data\\")
-    for k, v in N_GRAM_DATA.items():
-        print(f"{k}: type={v['type']} token={v['token']}")
-    print()
-
+def print_data(lm_file):
+    with open(lm_file, 'a') as file:
+        print("\\data\\", file=file)
+        for k, v in N_GRAM_DATA.items():
+            print(f"{k}: type={v['type']} token={v['token']}", file=file)
+        print(file=file)
 def find_unigram_probs():
     total_count = N_GRAM_DATA['ngram 1']['token']
     print("\\1-grams")
@@ -42,7 +43,7 @@ def find_trigam_probs():
         prob = trigam_count / bigram_count
         log_prob = math.log10(prob)
         print(f'{value} {prob} {log_prob} {item}')
-        print()
+    print()
 
 def add_data(current_n, n_gram, token_count):
     string_n_gram = " ".join(n_gram)
@@ -107,13 +108,21 @@ def get_counts(count_file):
                 # Increase current-n to next
                 current_n +=1
                 add_data(current_n, n_gram, token_count)
-        
+
+def get_input_files():
+    if len(sys.argv) !=3:
+        print("Need to call this with 2 files")
+    
+    n_gram_count_file = sys.argv[1]
+    lm_file = sys.argv[2]
+    return n_gram_count_file, lm_file
+
 def main():
-    count_file = '../q1/ngram_count_file'
-    get_counts(count_file)
+    n_gram_count_file, lm_file = get_input_files()
+    get_counts(n_gram_count_file)
     update_ngram_data()
-    # print_data()
-    # find_unigram_probs()
-    # find_bigram_probs()
+    print_data(lm_file)
+    find_unigram_probs()
+    find_bigram_probs()
     find_trigam_probs()
 main()
