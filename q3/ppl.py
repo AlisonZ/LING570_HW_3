@@ -26,46 +26,62 @@ def print_results():
         print("3-grams", file=file)
         print(TRIGRAMS, file=file)
 
-def calculate_perplexity(test_data, lamdba_1, lambda_2, lambda_3):
+def get_word_probs(lamdba_1, lambda_2, lambda_3, token):
+    split_token = token.split(" ")
+    word = split_token[0]
+    bigram = f"{split_token[-1]} {word}"
+    trigram = f"{split_token[-2]} {split_token[-1]} {word}" if len(split_token) == 4 else ''
+    total_prob = 0
+    if word in UNIGRAMS:
+        uni_prob = UNIGRAMS[word].get('prob')
+        bi_prob = BIGRAMS[bigram].get('prob') if bigram in BIGRAMS else 0
+        tri_prob = TRIGRAMS[trigram].get('prob') if trigram in TRIGRAMS else 0
+        l1 = float(uni_prob) * float(lamdba_1)
+        l2 = float(bi_prob) * float(lambda_2)
+        l3 = float(tri_prob) * float(lambda_3)
+        total_prob = l1 + l2 + l3
+    else: 
+        total_prob = 0
+    if total_prob > 0:
+        return math.log10(total_prob)
+    else:
+        return float('-inf')
+
+def get_tokens(sentence, lamdba_1, lambda_2, lambda_3):
+    for i, word in enumerate(sentence):
+        if i == 0:
+            token = f"{word} | <s>"
+        if i == 1:
+            token = f"{word} | <s> {sentence[i-1]}"
+        if i > 1:
+            token = f"{word} | {sentence[i-2]} {sentence[i-1]}"
+        word_prob = get_word_probs(lamdba_1, lambda_2, lambda_3, token)
+        print("PPP", word_prob)
+
+def calculate_lambda_probs(test_data, lamdba_1, lambda_2, lambda_3, output_file):
     with open(test_data, 'r', encoding='utf8') as file:
-        global SENTENCE_COUNT, WORD_NUM, OOV_NUM, SUM
-        lines = file.readlines()
-        SENTENCE_COUNT = len(lines)
-        for line in lines:
-            split_line = line.split()
-            BOS = split_line.pop(0)
-            EOS = split_line.pop(-1)
-            WORD_NUM += len(split_line)
-            split_line.append(EOS)
-            length = len(split_line)
-            for i, word in  enumerate(split_line):
-                # UNIGRAMS P
-                if word in UNIGRAMS:
-                    uni_prob = UNIGRAMS[word].get('prob')
-                    l1 = float(lamdba_1) * float(uni_prob)
-                    #BIGRAMS P
-                    if i+1< length:
-                        bigram_token = f"{split_line[i]} {split_line[i+1]}"
-                        if bigram_token in BIGRAMS:
-                            bi_prob = BIGRAMS[bigram_token].get('prob')
-                            l2 = float(lambda_2) * float(bi_prob)
-                        else:
-                            l2 = 0
-                    # TRIGRAMS
-                    if i+2 < length:
-                        tri_token = f"{split_line[i]} {split_line[i+1]} {split_line[i+2]}"
-                        if tri_token in TRIGRAMS:
-                            tri_prob = TRIGRAMS[tri_token].get('prob')
-                            l3 = float(lambda_3) * float(tri_prob)
-                        else:
-                            l3 = 0
-                    total_prob = l1 + l2 + l3
-                    SUM += math.log10(total_prob)
-                else:
-                    OOV_NUM +=1
-def get_final_perplexity():
+        with open(output_file, 'a') as output_file:
+            global SENTENCE_COUNT, WORD_NUM, OOV_NUM, SUM
+            lines = file.readlines()
+            SENTENCE_COUNT = len(lines)
+            for i, line in enumerate(lines):
+                print(f"Sent #{i+1}: {line}", file=output_file)
+                split_line = line.split()
+                # Handle BOS and EOS once tags are put back in
+                # BOS = split_line.pop(0)
+                # EOS = split_line.pop(-1)
+                # split_line.append(EOS)
+                
+                WORD_NUM += len(split_line)
+                # for word in split_line:
+                get_tokens(split_line, lamdba_1, lambda_2, lambda_3,)
+                
+def get_perplexity():
+    global WORD_NUM, SENTENCE_COUNT, OOV_NUM, SUM
     count = WORD_NUM + SENTENCE_COUNT - OOV_NUM
-    # TODO: calculate per slide
+    total = -SUM / count
+    ppl = 10 ** total
+    return ppl
 
 def load_lm(lm_file):
     with open(lm_file, 'r', encoding='utf8') as file:
@@ -138,7 +154,9 @@ def read_inputs():
 def main():
     lm_file, lamdba_1, lambda_2, lambda_3, test_data, output_file = read_inputs()
     load_lm(lm_file)
-    calculate_perplexity(test_data, lamdba_1, lambda_2, lambda_3)
+    calculate_lambda_probs(test_data, lamdba_1, lambda_2, lambda_3, output_file)
+    ppl = get_perplexity()
+    print(ppl)
     # print_results()
 main()
     
