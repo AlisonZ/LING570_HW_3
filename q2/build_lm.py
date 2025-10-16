@@ -12,38 +12,40 @@ def print_data(lm_file):
         for k, v in N_GRAM_DATA.items():
             print(f"{k}: type={v['type']} token={v['token']}", file=file)
         print(file=file)
-def find_unigram_probs():
-    total_count = N_GRAM_DATA['ngram 1']['token']
-    print("\\1-grams")
-    for key,value in UNIGRAM_DATA.items():
-        prob = value / total_count
-        log_prob = math.log10(prob)
-        print(f'{value} {prob} {log_prob} {key}')
+def find_unigram_probs(lm_file):
+    with open(lm_file, 'a') as file:
+        total_count = N_GRAM_DATA['ngram 1']['token']
+        print("\\1-grams", file=file)
+        for key,value in UNIGRAM_DATA.items():
+            prob = value / total_count
+            log_prob = math.log10(prob)
+            print(f'{value} {prob} {log_prob} {key}', file=file)
+        print(file=file)
 
-    print()
+def find_bigram_probs(lm_file):
+    with open(lm_file, 'a') as file:
+        print("\\2-grams", file=file)
+        for item, value in BIGRAM_DATA.items():
+            bigram_count = value
+            w1 =  item.split()[0]
+            unigram_count = UNIGRAM_DATA.get(w1)
+            prob = bigram_count / unigram_count
+            log_prob = math.log10(prob)
+            print(f'{value} {prob} {log_prob} {item}', file=file)
+        print(file=file)
 
-def find_bigram_probs():
-    print("\\2-grams")
-    for item, value in BIGRAM_DATA.items():
-        bigram_count = value
-        w1 =  item.split()[0]
-        unigram_count = UNIGRAM_DATA.get(w1)
-        prob = bigram_count / unigram_count
-        log_prob = math.log10(prob)
-        print(f'{value} {prob} {log_prob} {item}')
-    print()
-
-def find_trigam_probs():
-    print("\\3-grams")
-    for item, value in TRIGRAM_DATA.items():
-        trigam_count = value
-        split_bigram = item.split()[0:-1]
-        bigram = " ".join(split_bigram)
-        bigram_count = BIGRAM_DATA.get(bigram)
-        prob = trigam_count / bigram_count
-        log_prob = math.log10(prob)
-        print(f'{value} {prob} {log_prob} {item}')
-    print()
+def find_trigam_probs(lm_file):
+    with open(lm_file, 'a') as file:
+        print("\\3-grams", file=file)
+        for item, value in TRIGRAM_DATA.items():
+            trigam_count = value
+            split_bigram = item.split()[0:-1]
+            bigram = " ".join(split_bigram)
+            bigram_count = BIGRAM_DATA.get(bigram)
+            prob = trigam_count / bigram_count
+            log_prob = math.log10(prob)
+            print(f'{value} {prob} {log_prob} {item}', file=file)
+        print(file=file)
 
 def add_data(current_n, n_gram, token_count):
     string_n_gram = " ".join(n_gram)
@@ -122,7 +124,7 @@ def main():
     get_counts(n_gram_count_file)
     update_ngram_data()
     print_data(lm_file)
-    find_unigram_probs()
-    find_bigram_probs()
-    find_trigam_probs()
+    find_unigram_probs(lm_file)
+    find_bigram_probs(lm_file)
+    find_trigam_probs(lm_file)
 main()
