@@ -50,7 +50,7 @@ def get_word_probs(lamdba_1, lambda_2, lambda_3, token, sent_oov):
     else: 
         return float('-inf'), 1
 
-def get_tokens(sentence, lamdba_1, lambda_2, lambda_3):
+def get_tokens(sentence, lamdba_1, lambda_2, lambda_3, output_file):
     sentence_log = 0.0
     sent_oov = 0
     for i, word in enumerate(sentence):
@@ -62,7 +62,7 @@ def get_tokens(sentence, lamdba_1, lambda_2, lambda_3):
             token = f"{word} | {sentence[i-2]} {sentence[i-1]}"
         word_prob, oov_status = get_word_probs(lamdba_1, lambda_2, lambda_3, token, sent_oov)
         sent_oov +=oov_status
-        print(f"{i+1}: lg P({token}) = {word_prob}")
+        print(f"{i+1}: lg P({token}) = {word_prob}", file=output_file)
         if  word_prob != float('-inf'):
             sentence_log += word_prob
     return sentence_log, sent_oov
@@ -81,7 +81,7 @@ def get_sentence_stats(test_data, lamdba_1, lambda_2, lambda_3, output_file):
                 # EOS = split_line.pop(-1)
                 # split_line.append(EOS)
                 
-                sentence_log, sent_oov = get_tokens(split_line, lamdba_1, lambda_2, lambda_3)
+                sentence_log, sent_oov = get_tokens(split_line, lamdba_1, lambda_2, lambda_3, output_file)
                 word_count = len(split_line)
                 WORD_COUNT += word_count
                 OOV_NUM += sent_oov
@@ -92,17 +92,15 @@ def get_sentence_stats(test_data, lamdba_1, lambda_2, lambda_3, output_file):
                     sentence_avg_log = -(sentence_log / valid_words)
                     ppl = 10 ** (sentence_avg_log)
 
-
-                print(f"1 sentence, {word_count} words, {sent_oov} OOVs", )
-                print(f"lgprob={sentence_log}, ppl={ppl}")
-                print()
+                print(f"1 sentence, {word_count} words, {sent_oov} OOVs",file=output_file)
+                print(f"lgprob={sentence_log}, ppl={ppl}", file=output_file)
+                print(file=output_file)
 
 def get_overall_stats():
     count = WORD_COUNT + SENTENCE_NUM - OOV_NUM
     avg_lgprob = - LOG_PROB_SUM / count
     ppl = 10 ** avg_lgprob
-
-    print(f"lgprob={LOG_PROB_SUM} ave_lgprob={avg_lgprob} ppl={ppl}")
+    return f"lgprob={LOG_PROB_SUM} ave_lgprob={avg_lgprob} ppl={ppl}"
 
 def load_lm(lm_file):
     with open(lm_file, 'r', encoding='utf8') as file:
@@ -176,8 +174,9 @@ def main():
     lm_file, lamdba_1, lambda_2, lambda_3, test_data, output_file = read_inputs()
     load_lm(lm_file)
     get_sentence_stats(test_data, lamdba_1, lambda_2, lambda_3, output_file)
-    print(f"sent_num={SENTENCE_NUM} word_num={WORD_COUNT} oov_num={OOV_NUM}")
-    get_overall_stats()
-    # print(f"logprob=## ave_lgprob=## ppl={ppl}")
+    overall_stats = get_overall_stats()
+    with open(output_file, 'a') as output_file:
+        print(f"sent_num={SENTENCE_NUM} word_num={WORD_COUNT} oov_num={OOV_NUM}", file=output_file)
+        print(overall_stats, file=output_file)
 main()
     
