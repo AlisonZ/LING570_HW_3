@@ -10,6 +10,7 @@ TRIGRAMS = {}
 SENTENCE_NUM = 0
 WORD_COUNT = 0
 OOV_NUM = 0
+LOG_PROB_SUM = 0
 
 def print_results():
     with open('results', 'a') as file:
@@ -67,7 +68,7 @@ def get_tokens(sentence, lamdba_1, lambda_2, lambda_3):
     return sentence_log, sent_oov
 
 def get_sentence_stats(test_data, lamdba_1, lambda_2, lambda_3, output_file):
-    global SENTENCE_NUM, WORD_COUNT, OOV_NUM
+    global SENTENCE_NUM, WORD_COUNT, OOV_NUM, LOG_PROB_SUM
     with open(test_data, 'r', encoding='utf8') as file:
         with open(output_file, 'a') as output_file:
             lines = file.readlines()
@@ -84,6 +85,7 @@ def get_sentence_stats(test_data, lamdba_1, lambda_2, lambda_3, output_file):
                 word_count = len(split_line)
                 WORD_COUNT += word_count
                 OOV_NUM += sent_oov
+                LOG_PROB_SUM += sentence_log
 
                 valid_words = word_count - sent_oov
                 if valid_words > 0:
@@ -94,12 +96,13 @@ def get_sentence_stats(test_data, lamdba_1, lambda_2, lambda_3, output_file):
                 print(f"1 sentence, {word_count} words, {sent_oov} OOVs", )
                 print(f"lgprob={sentence_log}, ppl={ppl}")
                 print()
-                
-# def get_perplexity():
-    # # count = WORD_NUM + SENTENCE_COUNT - OOV
-    # total = -SUM / count
-    # ppl = 10 ** total
-    # return ppl
+
+def get_overall_stats():
+    count = WORD_COUNT + SENTENCE_NUM - OOV_NUM
+    avg_lgprob = - LOG_PROB_SUM / count
+    ppl = 10 ** avg_lgprob
+
+    print(f"lgprob={LOG_PROB_SUM} ave_lgprob={avg_lgprob} ppl={ppl}")
 
 def load_lm(lm_file):
     with open(lm_file, 'r', encoding='utf8') as file:
@@ -173,8 +176,8 @@ def main():
     lm_file, lamdba_1, lambda_2, lambda_3, test_data, output_file = read_inputs()
     load_lm(lm_file)
     get_sentence_stats(test_data, lamdba_1, lambda_2, lambda_3, output_file)
-    # ppl = get_perplexity()
     print(f"sent_num={SENTENCE_NUM} word_num={WORD_COUNT} oov_num={OOV_NUM}")
+    get_overall_stats()
     # print(f"logprob=## ave_lgprob=## ppl={ppl}")
 main()
     
