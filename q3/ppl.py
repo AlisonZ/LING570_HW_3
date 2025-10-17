@@ -46,25 +46,34 @@ def get_word_probs(lamdba_1, lambda_2, lambda_3, token, sent_oov):
         if total_prob > 0:
             return math.log10(total_prob), 0
         else:
+            # unseen gram
             return float('-inf'), 0
     else: 
+        # unknown word
         return float('-inf'), 1
 
-def get_tokens(sentence, lamdba_1, lambda_2, lambda_3, output_file):
+def get_tokens(sent_with_tags, lamdba_1, lambda_2, lambda_3, output_file):
     sentence_log = 0.0
     sent_oov = 0
-    for i, word in enumerate(sentence):
-        if i == 0:
-            token = f"{word} | <s>"
+    sentence = sent_with_tags.split(" ")
+    for i, word in enumerate(sentence):            
         if i == 1:
-            token = f"{word} | <s> {sentence[i-1]}"
+            token = f"{word} | {sentence[0]}"
         if i > 1:
             token = f"{word} | {sentence[i-2]} {sentence[i-1]}"
-        word_prob, oov_status = get_word_probs(lamdba_1, lambda_2, lambda_3, token, sent_oov)
-        sent_oov +=oov_status
-        print(f"{i+1}: lg P({token}) = {word_prob}", file=output_file)
-        if  word_prob != float('-inf'):
-            sentence_log += word_prob
+        if i > 0:
+            word_prob, oov_status = get_word_probs(lamdba_1, lambda_2, lambda_3, token, sent_oov)
+            sent_oov +=oov_status
+            word_status = ''
+            if word_prob == float('-inf'):
+                if oov_status == 0:
+                    word_status = '(unseen gram)'
+                if oov_status == 1:
+                    word_status = '(unknown word)'
+
+            print(f"{i}: lg P({token}) = {word_prob} {word_status}", file=output_file)
+            if  word_prob != float('-inf'):
+                sentence_log += word_prob
     return sentence_log, sent_oov
 
 def get_sentence_stats(test_data, lamdba_1, lambda_2, lambda_3, output_file):
@@ -73,16 +82,13 @@ def get_sentence_stats(test_data, lamdba_1, lambda_2, lambda_3, output_file):
         with open(output_file, 'a') as output_file:
             lines = file.readlines()
             for i, line in enumerate(lines):
-                SENTENCE_NUM +=1
-                print(f"Sent #{i+1}: {line}", file=output_file)
+                sent_with_tags = f"<s> {line} </s>"
+                print(f"Sent #{i+1}: {sent_with_tags}", file=output_file)
                 split_line = line.split()
-                # Handle BOS and EOS once tags are put back in
-                # BOS = split_line.pop(0)
-                # EOS = split_line.pop(-1)
-                # split_line.append(EOS)
-                
-                sentence_log, sent_oov = get_tokens(split_line, lamdba_1, lambda_2, lambda_3, output_file)
+            
+                sentence_log, sent_oov = get_tokens(sent_with_tags, lamdba_1, lambda_2, lambda_3, output_file)
                 word_count = len(split_line)
+                SENTENCE_NUM +=1
                 WORD_COUNT += word_count
                 OOV_NUM += sent_oov
                 LOG_PROB_SUM += sentence_log
@@ -174,9 +180,10 @@ def main():
     lm_file, lamdba_1, lambda_2, lambda_3, test_data, output_file = read_inputs()
     load_lm(lm_file)
     get_sentence_stats(test_data, lamdba_1, lambda_2, lambda_3, output_file)
-    overall_stats = get_overall_stats()
+    
     with open(output_file, 'a') as output_file:
         print(f"sent_num={SENTENCE_NUM} word_num={WORD_COUNT} oov_num={OOV_NUM}", file=output_file)
+        overall_stats = get_overall_stats()
         print(overall_stats, file=output_file)
 main()
     
